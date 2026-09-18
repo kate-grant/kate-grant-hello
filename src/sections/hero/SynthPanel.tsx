@@ -23,8 +23,6 @@ const MOSS = "#5b8042";
 const MOSS_LIT = "#9ccc6a";
 const TRACK = "rgba(253, 255, 191, 0.16)";
 
-// knob
-
 type Curve = "lin" | "log";
 const ARC = 135;
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
@@ -83,6 +81,7 @@ const Knob: FC<KnobProps> = ({
   const [dragging, setDragging] = useState(false);
   const [reveal, setReveal] = useState(false);
 
+  //refs
   const normRef = useRef(norm);
   normRef.current = norm;
   const setNorm = (n: number) =>
@@ -110,7 +109,7 @@ const Knob: FC<KnobProps> = ({
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;
-    const sensitivity = e.shiftKey ? 600 : 150;
+    const sensitivity = e.shiftKey ? 600 : 150; //full sweep
     setNorm(drag.current.n + (drag.current.y - e.clientY) / sensitivity);
   };
   const endDrag = () => {
@@ -200,6 +199,8 @@ const Knob: FC<KnobProps> = ({
   );
 };
 
+// knobs
+
 type KnobKey = Exclude<keyof SynthSettings, "wave" | "octave">;
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -272,7 +273,7 @@ const WAVES: { type: OscillatorType; label: string; path: string }[] = [
   { type: "square", label: "Square", path: "M1 9 V3 H7 V9 H13 V3 H19" },
 ];
 
-// panel
+// ---------- Panel ----------
 
 const CSS = `
 .synth-root, .synth-root * { box-sizing: border-box; }
@@ -311,10 +312,39 @@ const CSS = `
   margin-top: -0.5px; background: rgba(253,255,191,0.35); transform: rotate(-35deg); }
 .synth-root .synth-toggle { width: 44px; height: 44px; border-radius: 50%; background: #000;
   border: 1px solid rgba(253,255,191,0.14); display: grid; place-items: center; position: relative; }
-.synth-root .synth-toggle .synth-led { position: absolute; top: 8px; right: 8px; }
+.synth-root .synth-toggle .synth-led { position: absolute; top: 9px; right: 9px; }
+
+/* Touch screens: bigger targets (about 44px) for fingers */
+@media (pointer: coarse) {
+  .synth-root .synth-panel { width: 268px; }
+  .synth-root .synth-knob svg { width: 44px; height: 44px; }
+  .synth-root .synth-wave { width: 34px; height: 34px; }
+  .synth-root .synth-icon-btn { width: 34px; height: 34px; }
+  .synth-root .synth-octave output { width: 18px; }
+  .synth-root .synth-reset { padding: 8px 10px; }
+  .synth-root .synth-label { font-size: 11px; }
+}
+
+/* Below desktop: move to the bottom-right corner, clear of the centred name */
+@media (max-width: 899px) {
+  .synth-root { top: auto; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+
+/* Phones: the open panel becomes a full-width sheet along the bottom */
+@media (max-width: 559px) {
+  .synth-root[data-open="true"] { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .synth-root .synth-panel { width: 100%; }
+  .synth-root .synth-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .synth-root .synth-label { width: 100%; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .synth-root .synth-panel { animation: synth-in 160ms ease-out; }
   @keyframes synth-in { from { opacity: 0; transform: translateY(-4px); } }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 899px) {
+  .synth-root .synth-panel { animation-name: synth-in-up; }
+  @keyframes synth-in-up { from { opacity: 0; transform: translateY(6px); } }
 }
 `;
 
@@ -341,18 +371,23 @@ const SynthPanel: FC = () => {
   const [open, setOpen] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= 900
   );
+  const [isTouch] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(hover: none)").matches
+  );
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const preview = async () => {
-    if (await resumeAudio()) playNote(72); // C5
+    if (await resumeAudio()) playNote(72); //C5
   };
 
   if (!mounted) return null;
 
   return createPortal(
-    <div className="synth-root" data-synth-panel>
+    <div className="synth-root" data-synth-panel data-open={open}>
       <style>{CSS}</style>
 
       {!open ? (
@@ -384,7 +419,11 @@ const SynthPanel: FC = () => {
           <div className="synth-row">
             <span className="synth-status" aria-live="polite">
               <span className="synth-led" data-on={audioOn} />
-              {audioOn ? "sound on" : "click to enable"}
+              {audioOn
+                ? "sound on"
+                : isTouch
+                ? "tap to enable"
+                : "click to enable"}
             </span>
             <span style={{ display: "flex", gap: 2 }}>
               <button

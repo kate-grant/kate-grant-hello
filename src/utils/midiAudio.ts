@@ -1,14 +1,14 @@
-// Main oscillator waveform
-// Octave shift applied to every note, -2..2
-// Envelope attack, sec
-// Envelope release, sec
-// Low-pass filter cutoff, Hz
-// Filter resonance (Q) */
-// Level of the octave-up sine layer, 0..1
-// Echo amount, 0..1
-// Echo time, sec
-// Reverb amount, 0..1
-// Master volume, 0..1
+//oscillator waveform
+//oct shift applied to every note, -2..2
+//env attack, sec
+//env release, sec
+//LPF cutoff, Hz
+//filter resonance (Q) */
+//lvl of the octave-up sine layer, 0..1
+//echo amount, 0..1
+//echo time, sec
+//reverb amount, 0..1
+//master volume, 0..1
 
 export type SynthSettings = {
   wave: OscillatorType;
@@ -66,12 +66,12 @@ const NOTE_NAMES = [
 ];
 const MAX_VOICES = 12;
 
-// midi
+//midi
 
 export const midiToFreq = (midi: number): number =>
   440 * Math.pow(2, (midi - 69) / 12);
 
-/** "C4" -> 60, "F#5" -> 78, "Bb3" -> 58 */
+//"C4" -> 60, "F#5" -> 78, "Bb3" -> 58
 export function noteNameToMidi(name: string): number {
   const match = /^([A-Ga-g])([#b]?)(-?\d+)$/.exec(name.trim());
   if (!match) throw new Error(`Invalid note name: "${name}"`);
@@ -82,6 +82,7 @@ export function noteNameToMidi(name: string): number {
   return (parseInt(octave, 10) + 1) * 12 + pitchClass;
 }
 
+// 60 -> "C4"
 export const midiToNoteName = (midi: number): string =>
   `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
 
@@ -245,7 +246,14 @@ export async function resumeAudio(): Promise<boolean> {
 
 export function initAudioUnlock(): () => void {
   if (typeof window === "undefined") return () => {};
-  const events = ["pointerdown", "keydown", "touchstart"] as const;
+
+  const events = [
+    "pointerdown",
+    "pointerup",
+    "touchend",
+    "click",
+    "keydown",
+  ] as const;
 
   const cleanup = () =>
     events.forEach((e) => window.removeEventListener(e, unlock, true));
@@ -298,12 +306,13 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   const peak = (Math.max(0, Math.min(127, velocity)) / 127) * 0.6;
   const freq = midiToFreq(midi + s.octave * 12);
 
+  //voices
   if (voices.length >= MAX_VOICES) {
     const oldest = voices.shift();
     if (oldest) fadeOutFast(oldest, now);
   }
 
-  // envelope
+  //env
   const gain = c.createGain();
   gain.gain.setValueAtTime(0, now);
   gain.gain.linearRampToValueAtTime(peak, now + attack);
@@ -311,6 +320,8 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   const releaseStart = now + attack + duration;
   gain.gain.setTargetAtTime(0, releaseStart, release / 5);
   const end = releaseStart + release;
+
+  //body
   const body = c.createOscillator();
   body.type = wave;
   body.frequency.value = freq;
@@ -325,6 +336,7 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   body.connect(gain);
   shimmerOsc.connect(shimmerGain).connect(gain);
 
+  //stereo pan
   let panner: StereoPannerNode | null = null;
   if (typeof c.createStereoPanner === "function") {
     panner = c.createStereoPanner();

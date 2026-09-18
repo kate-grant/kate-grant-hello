@@ -7,6 +7,7 @@ import {
   initAudioUnlock,
   noteNameToMidi,
   playNote,
+  resumeAudio,
 } from "../../utils/midiAudio";
 
 const GRAVITY = 0.1;
@@ -209,26 +210,79 @@ const AnimatedSVGsContainer: FC = () => {
         (exit) => exit.remove()
       );
 
+    // Audio: first click/key/tap anywhere unlocks sound (hover alone can't)
     const disposeAudioUnlock = initAudioUnlock();
     const canTrigger = createRetriggerGuard(150);
 
+    // Hover is detected manually instead of via DOM events, so it works even
+    // if other page content is stacked above the SVG (which has
+    // pointer-events: none so the page below stays clickable).
     let pointer: { x: number; y: number } | null = null;
     const hovered = new Set<string>();
 
     const onPointerMove = (e: PointerEvent) => {
+      // A moving finger is a scroll or drag, not a hover. Touch plays on tap
+      // instead (below), so only mouse and pen move the hover pointer.
+      if (e.pointerType === "touch") return;
       pointer = { x: e.clientX, y: e.clientY };
     };
     const onPointerLeave = () => {
       pointer = null;
     };
-
+    // capture: true so nothing that calls stopPropagation (e.g. a canvas
+    // background) can stop the event before it reaches us.
     window.addEventListener("pointermove", onPointerMove, {
+      passive: true,
+      capture: true,
+    });
+
+    // Touch: play on tap. A tap is a short press that barely moves; if the
+    // finger starts a scroll the browser fires pointercancel and nothing plays.
+    let tap: { id: number; x: number; y: number; t: number } | null = null;
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch" || !e.isPrimary) return;
+      tap = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        t: performance.now(),
+      };
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!tap || e.pointerId !== tap.id) return;
+      const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y);
+      const held = performance.now() - tap.t;
+      tap = null;
+      if (moved > 10 || held > 500) return;
+
+      const d = shapeAt(e.clientX, e.clientY);
+      if (!d) return;
+      hop(d);
+      // The end of a tap counts as a user gesture, so this can switch sound
+      // on and play in one go, even on the very first tap.
+      void resumeAudio().then((ok) => {
+        if (ok) playNote(d.note, { pan: panFor(d), velocity: 110 });
+      });
+    };
+    const onPointerCancel = (e: PointerEvent) => {
+      if (tap && e.pointerId === tap.id) tap = null;
+    };
+    window.addEventListener("pointerdown", onPointerDown, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("pointerup", onPointerUp, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("pointercancel", onPointerCancel, {
       passive: true,
       capture: true,
     });
     document.documentElement.addEventListener("pointerleave", onPointerLeave);
     window.addEventListener("blur", onPointerLeave);
 
+    /** Is a point (in SVG coordinates) inside this shape, accounting for rotation? */
     function hitTest(d: ShapeNode, px: number, py: number): boolean {
       const dx = px - d.x;
       const dy = py - d.y;
@@ -236,14 +290,44 @@ const AnimatedSVGsContainer: FC = () => {
         const r = d.width / 2;
         return dx * dx + dy * dy <= r * r;
       }
+      // Rotate the point into the pill's local (unrotated) space
       const cos = Math.cos(d.angle);
       const sin = Math.sin(d.angle);
       const lx = dx * cos + dy * sin;
       const ly = -dx * sin + dy * cos;
+      // Capsule test: distance to the pill's centre line <= half its height
       const r = d.height / 2;
       const halfLine = Math.max(0, d.width / 2 - r);
       const cx = Math.max(-halfLine, Math.min(halfLine, lx));
       return (lx - cx) ** 2 + ly ** 2 <= r * r;
+    }
+
+    const OCCLUDERS = "[data-occludes-shapes], [data-synth-panel]";
+
+    const panFor = (d: ShapeNode) =>
+      Math.max(-1, Math.min(1, (d.x / expandedWidth) * 2 - 1));
+
+    /** The topmost visible shape under a viewport point, if any. */
+    function shapeAt(clientX: number, clientY: number): ShapeNode | null {
+      const svgEl = svgRef.current;
+      if (!svgEl) return null;
+      if (document.elementFromPoint(clientX, clientY)?.closest(OCCLUDERS))
+        return null;
+      const rect = svgEl.getBoundingClientRect();
+      const px = clientX - rect.left;
+      const py = clientY - rect.top;
+      // Later shapes are drawn on top, so check them first
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        if (hitTest(nodes[i], px, py)) return nodes[i];
+      }
+      return null;
+    }
+
+    /** Little jump so a tap has something to see as well as hear. */
+    function hop(d: ShapeNode) {
+      d.settled = false;
+      d.vy = -3.5;
+      d.angularVelocity += (Math.random() - 0.5) * 0.08;
     }
 
     function checkHover() {
@@ -252,11 +336,19 @@ const AnimatedSVGsContainer: FC = () => {
         hovered.clear();
         return;
       }
+
+      // Content scrolls over the pills, so only play a pill that's actually
+      // visible: skip if the cursor is over a card, the sound panel, or
+      // anything else marked data-occludes-shapes. Checked every frame so it
+      // stays right while content scrolls under a still cursor.
       const under = document.elementFromPoint(pointer.x, pointer.y);
-      if (under?.closest("[data-occludes-shapes], [data-synth-panel]")) {
+      if (under?.closest(OCCLUDERS)) {
         hovered.clear();
         return;
       }
+      // Convert viewport coords -> SVG coords (handles the -15% offset).
+      // The SVG has no viewBox, so 1 SVG unit = 1 CSS px from its top-left
+      // corner, whatever size CSS gives the box. No scaling needed.
       const rect = svgEl.getBoundingClientRect();
       const px = pointer.x - rect.left;
       const py = pointer.y - rect.top;
@@ -266,11 +358,7 @@ const AnimatedSVGsContainer: FC = () => {
         if (inside && !hovered.has(d.id)) {
           hovered.add(d.id);
           if (canTrigger(d.id)) {
-            const pan = Math.max(
-              -1,
-              Math.min(1, (d.x / expandedWidth) * 2 - 1)
-            );
-            playNote(d.note, { pan, velocity: 100 });
+            playNote(d.note, { pan: panFor(d), velocity: 100 });
           }
         } else if (!inside) {
           hovered.delete(d.id);
@@ -361,6 +449,13 @@ const AnimatedSVGsContainer: FC = () => {
       window.removeEventListener("pointermove", onPointerMove, {
         capture: true,
       });
+      window.removeEventListener("pointerdown", onPointerDown, {
+        capture: true,
+      });
+      window.removeEventListener("pointerup", onPointerUp, { capture: true });
+      window.removeEventListener("pointercancel", onPointerCancel, {
+        capture: true,
+      });
       document.documentElement.removeEventListener(
         "pointerleave",
         onPointerLeave
@@ -374,6 +469,8 @@ const AnimatedSVGsContainer: FC = () => {
     <svg
       ref={svgRef}
       style={{
+        // Fixed so the pills stay pinned while page content scrolls over them.
+        // Sections sit at z-index 15 (see Section.tsx), above this layer.
         position: "fixed",
         top: "-15%",
         left: "-15%",

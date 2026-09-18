@@ -25,7 +25,7 @@ const AREAS: Area[] = [
     title: "Data",
     summary:
       "Pipelines and visualizations that turn raw data into something people can explore, question, and act on.",
-    tools: ["Python", "SQL", "ETL", "Visualization"],
+    tools: ["Functional Programming", "SQL", "ETL", "Visualization"],
   },
   {
     title: "Creative tools",
@@ -36,11 +36,109 @@ const AREAS: Area[] = [
 ];
 
 const STEP_VH = 70;
+const PINNED_QUERY = "(min-width: 768px) and (min-height: 700px)";
 
 const MOSS = "#5b8042";
 const CREAM = "#fdffbf";
 
-const Expertise = () => {
+const useMediaQuery = (query: string) => {
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+
+  return matches;
+};
+
+const Intro = ({ pinned }: { pinned: boolean }) => (
+  <div>
+    <p
+      className={`text-balance font-semibold leading-[1.05] tracking-[-0.02em] ${
+        pinned
+          ? "text-[clamp(2rem,min(5vw,7vh),4rem)]"
+          : "text-[clamp(1.75rem,8vw,3rem)]"
+      }`}
+    >
+      Hey, A Vinyl Bar in Shibuya!
+    </p>
+    <h2
+      className={`mt-4 text-balance font-semibold leading-[1.05] tracking-[-0.02em] ${
+        pinned
+          ? "text-[clamp(1.75rem,min(4vw,6vh),3.5rem)]"
+          : "text-[clamp(1.5rem,6.5vw,2.5rem)]"
+      }`}
+    >
+      I write code that helps humans be human.
+    </h2>
+    <p className="mt-4 max-w-[38ch] text-base leading-relaxed opacity-75 md:mt-6 md:text-lg">
+      Design-minded full stack engineer building scalable, data-driven
+      platforms, robust interface, and engineering experience in music
+      distribution.
+    </p>
+  </div>
+);
+
+const AreaDetail = ({ area, large }: { area: Area; large: boolean }) => (
+  <>
+    <h3
+      className={`font-semibold tracking-tight ${
+        large ? "text-3xl lg:text-4xl" : "text-xl sm:text-2xl"
+      }`}
+    >
+      {area.title}
+    </h3>
+    <p
+      className={`mt-3 max-w-[48ch] leading-relaxed opacity-80 ${
+        large ? "text-lg md:mt-4" : "text-base"
+      }`}
+    >
+      {area.summary}
+    </p>
+    <ul
+      className="mt-4 flex list-none flex-wrap gap-2 md:mt-6"
+      aria-label={`${area.title} tools`}
+    >
+      {area.tools.map((tool) => (
+        <li
+          key={tool}
+          className="rounded-full px-3.5 py-1.5 text-sm sm:px-4"
+          style={{ backgroundColor: MOSS, color: CREAM }}
+        >
+          {tool}
+        </li>
+      ))}
+    </ul>
+  </>
+);
+
+const StackedExpertise = () => (
+  <Section id="expertise" fitScreen={false}>
+    <div className="px-4 pb-24 pt-28 sm:px-8">
+      <Card size="xl" variant="dark" className="mx-auto flex flex-col gap-10">
+        <Intro pinned={false} />
+        <ul className="flex list-none flex-col" aria-label="Areas of expertise">
+          {AREAS.map((area) => (
+            <li
+              key={area.title}
+              className="border-t border-white/10 py-8 last:pb-0"
+            >
+              <AreaDetail area={area} large={false} />
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  </Section>
+);
+
+const PinnedExpertise = () => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const active = Math.min(
@@ -96,28 +194,17 @@ const Expertise = () => {
         className="relative"
         style={{ height: `${100 + AREAS.length * STEP_VH}vh` }}
       >
-        <div className="sticky top-0 flex h-screen items-center justify-center px-4 pb-6 pt-28 sm:px-8 md:pb-10">
+        <div className="sticky top-0 flex h-screen items-center justify-center px-8 pb-10 pt-28">
           <Card
             size="xl"
             variant="dark"
-            className="grid h-full max-h-[44rem] grid-rows-[auto_1fr_auto] gap-6 overflow-hidden md:grid-cols-12 md:grid-rows-[1fr_auto] md:gap-x-12 md:gap-y-10"
+            className="grid h-full max-h-[44rem] grid-cols-12 grid-rows-[1fr_auto] gap-x-8 gap-y-8 overflow-hidden lg:gap-x-12 lg:gap-y-10"
           >
-            <div className="flex flex-col gap-6 md:col-span-5 md:justify-between md:gap-10">
-              <div>
-                <h2 className="text-balance text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
-                  Hey A Vinyl Bar in Shibuya!
-                </h2>
-                <h2 className="mt-4 text-balance text-[clamp(1.75rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-[-0.02em]">
-                  I write code that helps humans be human.
-                </h2>
-                <p className="mt-4 max-w-[38ch] text-base leading-relaxed opacity-75 md:mt-6 md:text-lg">
-                  Design-minded full stack engineer building scalable,
-                  data-driven creative platforms.
-                </p>
-              </div>
+            <div className="col-span-5 flex min-h-0 flex-col justify-between gap-8">
+              <Intro pinned />
 
               <nav aria-label="Areas of expertise">
-                <ul className="list-none flex flex-wrap gap-x-5 gap-y-2 md:flex-col md:gap-3">
+                <ul className="flex list-none flex-col gap-1">
                   {AREAS.map((area, i) => {
                     const isActive = i === active;
                     return (
@@ -126,7 +213,7 @@ const Expertise = () => {
                           type="button"
                           onClick={() => goTo(i)}
                           aria-current={isActive ? "true" : undefined}
-                          className={`flex items-center gap-3 text-left text-sm transition-opacity duration-300 motion-reduce:transition-none md:text-lg ${
+                          className={`flex items-center py-1 text-left text-base transition-opacity duration-300 motion-reduce:transition-none lg:text-lg ${
                             isActive
                               ? "opacity-100"
                               : "opacity-45 hover:opacity-80"
@@ -141,7 +228,7 @@ const Expertise = () => {
               </nav>
             </div>
 
-            <div className="relative min-h-[14rem] md:col-span-7">
+            <div className="relative col-span-7 min-h-0">
               {AREAS.map((area, i) => {
                 const state =
                   i === active
@@ -153,28 +240,9 @@ const Expertise = () => {
                   <article
                     key={area.title}
                     aria-hidden={i !== active}
-                    className={`absolute inset-0 flex flex-col justify-start transition duration-500 ease-out motion-reduce:transition-none md:justify-end ${state}`}
+                    className={`absolute inset-0 flex flex-col justify-end transition duration-500 ease-out motion-reduce:transition-none ${state}`}
                   >
-                    <h3 className="text-2xl font-semibold tracking-tight md:text-4xl">
-                      {area.title}
-                    </h3>
-                    <p className="mt-3 max-w-[48ch] text-base leading-relaxed opacity-80 md:mt-4 md:text-lg">
-                      {area.summary}
-                    </p>
-                    <ul
-                      className="mt-5 flex flex-wrap gap-2 md:mt-6 list-none"
-                      aria-label={`${area.title} tools`}
-                    >
-                      {area.tools.map((tool) => (
-                        <li
-                          key={tool}
-                          className="rounded-full px-4 py-1.5 text-sm"
-                          style={{ backgroundColor: MOSS, color: CREAM }}
-                        >
-                          {tool}
-                        </li>
-                      ))}
-                    </ul>
+                    <AreaDetail area={area} large />
                   </article>
                 );
               })}
@@ -182,7 +250,7 @@ const Expertise = () => {
 
             <div
               aria-hidden="true"
-              className="h-0.5 w-full overflow-hidden rounded-full bg-black/10 md:col-span-12"
+              className="col-span-12 h-0.5 w-full overflow-hidden rounded-full bg-white/15"
             >
               <div
                 className="h-full origin-left"
@@ -197,6 +265,11 @@ const Expertise = () => {
       </div>
     </Section>
   );
+};
+
+const Expertise = () => {
+  const pinned = useMediaQuery(PINNED_QUERY);
+  return pinned ? <PinnedExpertise /> : <StackedExpertise />;
 };
 
 export default Expertise;

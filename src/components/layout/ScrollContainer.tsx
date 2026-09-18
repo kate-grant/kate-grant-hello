@@ -15,7 +15,10 @@ const fixedStyle: CSSProperties = {
   userSelect: "none",
   padding: "0 2em",
   borderRadius: "500px",
-  backgroundColor: "#000",
+  backgroundColor: "rgba(0, 0, 0, 0.75)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  border: "1px solid rgba(255, 255, 255, 0.1)",
   color: "#fdffbf",
 };
 
