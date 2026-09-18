@@ -12,26 +12,26 @@ const AREAS: Area[] = [
   {
     title: "Interfaces",
     summary:
-      "Front ends that feel considered at every scale, from design systems down to single moments of motion and sound.",
-    tools: ["React", "TypeScript", "D3", "Web Audio"],
-  },
-  {
-    title: "Platforms",
-    summary:
-      "APIs, data models and services that stay fast and easy to reason about as the product and the team grow.",
-    tools: ["Node", "PostgreSQL", "GraphQL", "Observability"],
+      "Responsive React front ends, built hand in hand with design, product and data. Recent work: artist analytics dashboards and one-click Spotify for Artists onboarding.",
+    tools: ["React", "TypeScript", "Design tokens", "A/B testing"],
   },
   {
     title: "Data",
     summary:
-      "Pipelines and visualizations that turn raw data into something people can explore, question, and act on.",
-    tools: ["Functional Programming", "SQL", "ETL", "Visualization"],
+      "Dense data made readable, from streaming and YouTube Content ID insights for artists to a 3D map of more than 100,000 stars.",
+    tools: ["D3.js", "Three.js", "PostgreSQL", "SQL"],
   },
   {
-    title: "Creative tools",
+    title: "Platforms",
     summary:
-      "Software for makers: editors and workflows that give creative people more room to play.",
-    tools: ["WebGL", "Audio", "Communication", "Documentation"],
+      "The plumbing under the interface: GraphQL middleware for real-time data, secure REST APIs, and an OCaml standard library tested to 80% coverage.",
+    tools: ["Node.js", "GraphQL", "OCaml", "Jest"],
+  },
+  {
+    title: "Sound",
+    summary:
+      "Where the music degree comes in: a multiplayer synth steered by live sentiment analysis, a showcase for 25 web audio works, and fixes to p5.js and Three.js.",
+    tools: ["Web Audio", "p5.js", "Hugging Face", "Firebase"],
   },
 ];
 
@@ -78,9 +78,8 @@ const Intro = ({ pinned }: { pinned: boolean }) => (
       I write code that helps humans be human.
     </h2>
     <p className="mt-4 max-w-[38ch] text-base leading-relaxed opacity-75 md:mt-6 md:text-lg">
-      Design-minded full stack engineer building scalable, data-driven
-      platforms, robust interface, and engineering experience in music
-      distribution.
+      Design-minded full stack engineer with a degree in music. Most recently, I
+      built tools for independent artists in music distribution.
     </p>
   </div>
 );
