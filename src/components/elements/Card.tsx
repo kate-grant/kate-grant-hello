@@ -11,8 +11,6 @@ interface CardProps {
   style?: CSSProperties;
 }
 
-// Padding grows with the card so small cards aren't cramped and large ones
-// aren't airless. xl is capped so lines never stretch across a wide monitor.
 const sizeClasses: Record<CardSize, string> = {
   sm: "w-64 p-4",
   md: "w-80 p-6",
