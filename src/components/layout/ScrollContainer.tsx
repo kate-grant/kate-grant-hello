@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import AsciiBackground from "@/components/background/ASCIIBackground";
+import type { FC } from "react";
+import AnimatedSVGsContainer from "@/sections/hero/AnimatedSVGContainer";
 
 const fixedStyle: CSSProperties = {
   position: "fixed",
@@ -17,7 +19,7 @@ const fixedStyle: CSSProperties = {
   color: "#fdffbf",
 };
 
-const ScrollContainer: React.FC = () => {
+const ScrollContainer: FC<{ children: React.ReactNode }> = ({ children }) => {
   const homeRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -46,12 +48,8 @@ const ScrollContainer: React.FC = () => {
     <>
       <div style={fixedStyle}>KATE GRANT</div>
       <AsciiBackground variant={variant} />
-      <div
-        ref={homeRef}
-        style={{
-          minHeight: "100vh",
-        }}
-      ></div>
+      <div ref={homeRef} className={"h-2"}></div>
+      {children}
     </>
   );
 };

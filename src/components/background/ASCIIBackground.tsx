@@ -1,3 +1,5 @@
+import AnimatedSVGsContainer from "@/sections/hero/AnimatedSVGContainer";
+import SynthPanel from "@/sections/hero/SynthPanel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
 
@@ -45,7 +47,7 @@ const HomeBackground: FC = () => {
           const charIndex = Math.floor(normalized * (asciiChars.length - 1));
           const char = asciiChars[charIndex];
 
-          ctx.fillStyle = "#828282";
+          ctx.fillStyle = "#b0d1b2";
           ctx.fillText(char, x, y);
         }
       }
@@ -61,7 +63,7 @@ const HomeBackground: FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed top-0 left-0 w-full h-full bg-[#dbd4bd] transition-all duration-800 ease-in-out -z-10 pointer-events-none"
+      className="fixed top-0 left-0 w-full h-full bg-amber-50 transition-all duration-800 ease-in-out -z-10 pointer-events-none"
     />
   );
 };
@@ -206,7 +208,7 @@ const InfoBackground1: FC = () => {
           );
           const char = asciiChars[charIndex];
 
-          ctx.fillStyle = "#828282";
+          ctx.fillStyle = "#b0d1b2";
           ctx.fillText(char, x, y);
         }
       }
@@ -224,7 +226,7 @@ const InfoBackground1: FC = () => {
     <canvas
       ref={canvasRef}
       className={
-        "fixed top-0 left-0 w-full h-full bg-[#dbd4bd] transition-all duration-800 ease-in-out -z-10 pointer-events-none"
+        "fixed top-0 left-0 w-full h-full bg-amber-50 transition-all duration-800 ease-in-out -z-10 pointer-events-none"
       }
     />
   );
@@ -382,7 +384,7 @@ const InfoBackground2: FC = () => {
 
           const char = asciiChars[charIndex];
 
-          ctx.fillStyle = "#828282";
+          ctx.fillStyle = "#b0d1b2";
           ctx.fillText(char, x, y);
         }
       }
@@ -396,7 +398,14 @@ const InfoBackground2: FC = () => {
     };
   }, [asciiChars, noise]);
 
-  return <canvas ref={canvasRef} className={styles.asciiCanvas} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className={
+        "fixed top-0 left-0 w-full h-full bg-amber-50 transition-all duration-800 ease-in-out -z-10 pointer-events-none"
+      }
+    />
+  );
 };
 
 type AsciiBackgroundVariant = "home" | "info";
@@ -465,6 +474,8 @@ const AsciiBackground: FC<AsciiBackgroundProps> = ({ variant }) => {
       >
         <CurrentComponent />
       </div>
+      <SynthPanel />
+      <AnimatedSVGsContainer />
     </div>
   );
 };
