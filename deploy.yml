@@ -1,11 +1,9 @@
-# .github/workflows/deploy.yml
-# Builds the Vite app and publishes the built `dist` folder to GitHub Pages.
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # lets you re-run it by hand from the Actions tab
+  workflow_dispatch
 
 permissions:
   contents: read
@@ -13,8 +11,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+     group: pages-deploy
+     cancel-in-progress: true
 
 jobs:
   build:
@@ -29,8 +27,6 @@ jobs:
 
       - run: npm ci
 
-      # Project sites live at username.github.io/<repo>/, so assets need that
-      # prefix. A repo named username.github.io is served from the root.
       - name: Build
         run: |
           REPO="${{ github.event.repository.name }}"
