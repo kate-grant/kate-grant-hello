@@ -1,29 +1,26 @@
-// src/utils/midiAudio.ts
-// Tiny Web Audio synth driven by MIDI note numbers, with a shared settings
-// store (for UI controls) and a small effects chain: filter -> echo + space.
+// Main oscillator waveform
+// Octave shift applied to every note, -2..2
+// Envelope attack, sec
+// Envelope release, sec
+// Low-pass filter cutoff, Hz
+// Filter resonance (Q) */
+// Level of the octave-up sine layer, 0..1
+// Echo amount, 0..1
+// Echo time, sec
+// Reverb amount, 0..1
+// Master volume, 0..1
 
 export type SynthSettings = {
-  /** Main oscillator waveform */
   wave: OscillatorType;
-  /** Octave shift applied to every note, -2..2 */
   octave: number;
-  /** Envelope attack, seconds */
   attack: number;
-  /** Envelope release, seconds */
   release: number;
-  /** Low-pass filter cutoff, Hz */
   cutoff: number;
-  /** Filter resonance (Q) */
   resonance: number;
-  /** Level of the octave-up sine layer, 0..1 */
   shimmer: number;
-  /** Echo (delay) amount, 0..1 */
   echo: number;
-  /** Echo time, seconds */
   echoTime: number;
-  /** Reverb amount, 0..1 */
   space: number;
-  /** Master volume, 0..1 */
   volume: number;
 };
 
@@ -42,13 +39,9 @@ export const DEFAULT_SYNTH_SETTINGS: SynthSettings = {
 };
 
 export type PlayNoteOptions = {
-  /** MIDI velocity 0–127 (loudness). Default 100. */
   velocity?: number;
-  /** Seconds the note is held before release starts. Default 0.25. */
   duration?: number;
-  /** Stereo position, -1 (left) to 1 (right). Default 0. */
   pan?: number;
-  /** Per-note overrides of the shared settings */
   wave?: OscillatorType;
   attack?: number;
   decay?: number;
@@ -73,7 +66,7 @@ const NOTE_NAMES = [
 ];
 const MAX_VOICES = 12;
 
-// ---------- MIDI helpers ----------
+// midi
 
 export const midiToFreq = (midi: number): number =>
   440 * Math.pow(2, (midi - 69) / 12);
@@ -89,11 +82,9 @@ export function noteNameToMidi(name: string): number {
   return (parseInt(octave, 10) + 1) * 12 + pitchClass;
 }
 
-/** 60 -> "C4" */
 export const midiToNoteName = (midi: number): string =>
   `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
 
-/** Map an index onto a scale so any number of items stays in key. */
 export const PENTATONIC_MAJOR = [0, 2, 4, 7, 9];
 export function scaleNote(
   index: number,
@@ -103,8 +94,6 @@ export function scaleNote(
   const octave = Math.floor(index / intervals.length);
   return root + octave * 12 + intervals[index % intervals.length];
 }
-
-// ---------- Settings store (works with React's useSyncExternalStore) ----------
 
 let settings: SynthSettings = { ...DEFAULT_SYNTH_SETTINGS };
 const settingsListeners = new Set<() => void>();
@@ -132,8 +121,6 @@ export function setMasterVolume(volume: number): void {
   setSynthSettings({ volume: Math.max(0, Math.min(1, volume)) });
 }
 
-// ---------- Audio graph ----------
-
 type FxChain = {
   input: GainNode;
   filter: BiquadFilterNode;
@@ -155,7 +142,6 @@ const notifyAudio = () => audioListeners.forEach((l) => l());
 
 export const isAudioReady = (): boolean => ctx?.state === "running";
 
-/** Subscribe to audio on/off changes (for a status light). */
 export function subscribeAudioState(listener: () => void): () => void {
   audioListeners.add(listener);
   return () => {
@@ -163,7 +149,6 @@ export function subscribeAudioState(listener: () => void): () => void {
   };
 }
 
-/** Decaying noise, used as a cheap reverb impulse response. */
 function makeImpulse(c: AudioContext, seconds = 2.2, decay = 3): AudioBuffer {
   const length = Math.floor(c.sampleRate * seconds);
   const buffer = c.createBuffer(2, length, c.sampleRate);
@@ -176,10 +161,6 @@ function makeImpulse(c: AudioContext, seconds = 2.2, decay = 3): AudioBuffer {
   return buffer;
 }
 
-//  voices -> input -> filter -> master -> compressor -> out
-//                       |-> delaySend -> delay -> tone -> feedback -> (delay)
-//                       |                           '-> master
-//                       '-> reverbSend -> convolver -> master
 function buildFx(c: AudioContext): FxChain {
   const input = c.createGain();
   const filter = c.createBiquadFilter();
@@ -218,7 +199,7 @@ function applySettings(): void {
   if (!ctx || !fx) return;
   const t = ctx.currentTime;
   const s = settings;
-  const k = 0.03; // smoothing time constant, avoids clicks while turning knobs
+  const k = 0.03;
   fx.filter.frequency.setTargetAtTime(s.cutoff, t, k);
   fx.filter.Q.setTargetAtTime(s.resonance, t, k);
   fx.delaySend.gain.setTargetAtTime(s.echo * 0.7, t, k);
@@ -229,7 +210,7 @@ function applySettings(): void {
 }
 
 function getContext(): AudioContext | null {
-  if (typeof window === "undefined") return null; // SSR / prerender safety
+  if (typeof window === "undefined") return null;
   if (!ctx) {
     const Ctor =
       window.AudioContext ??
@@ -238,7 +219,6 @@ function getContext(): AudioContext | null {
     if (!Ctor) return null;
     ctx = new Ctor();
     fx = buildFx(ctx);
-    // Set initial values directly so the first note isn't mid-ramp
     fx.filter.frequency.value = settings.cutoff;
     fx.filter.Q.value = settings.resonance;
     fx.delaySend.gain.value = settings.echo * 0.7;
@@ -252,7 +232,6 @@ function getContext(): AudioContext | null {
   return ctx;
 }
 
-/** Resume audio from inside a click/key handler. Resolves true if sound is on. */
 export async function resumeAudio(): Promise<boolean> {
   const c = getContext();
   if (!c) return false;
@@ -264,11 +243,6 @@ export async function resumeAudio(): Promise<boolean> {
   return c.state === "running";
 }
 
-/**
- * Browsers only allow audio after a real user gesture (click, key, tap).
- * Hover does NOT count, so this listens for the first gesture anywhere on
- * the page and resumes the AudioContext. Returns a cleanup function.
- */
 export function initAudioUnlock(): () => void {
   if (typeof window === "undefined") return () => {};
   const events = ["pointerdown", "keydown", "touchstart"] as const;
@@ -299,7 +273,6 @@ function fadeOutFast(voice: Voice, now: number) {
   voice.oscs.forEach((o) => o.stop(now + 0.06));
 }
 
-/** Play a single MIDI note. Silently does nothing until audio is unlocked. */
 export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   const c = getContext();
   if (!c || !fx) return;
@@ -325,13 +298,12 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   const peak = (Math.max(0, Math.min(127, velocity)) / 127) * 0.6;
   const freq = midiToFreq(midi + s.octave * 12);
 
-  // Voice stealing: fade out the oldest note if too many are ringing.
   if (voices.length >= MAX_VOICES) {
     const oldest = voices.shift();
     if (oldest) fadeOutFast(oldest, now);
   }
 
-  // Envelope
+  // envelope
   const gain = c.createGain();
   gain.gain.setValueAtTime(0, now);
   gain.gain.linearRampToValueAtTime(peak, now + attack);
@@ -339,8 +311,6 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   const releaseStart = now + attack + duration;
   gain.gain.setTargetAtTime(0, releaseStart, release / 5);
   const end = releaseStart + release;
-
-  // Body tone + a quiet, slightly detuned octave layer for shimmer
   const body = c.createOscillator();
   body.type = wave;
   body.frequency.value = freq;
@@ -355,7 +325,6 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   body.connect(gain);
   shimmerOsc.connect(shimmerGain).connect(gain);
 
-  // Stereo pan (StereoPannerNode is missing in very old Safari)
   let panner: StereoPannerNode | null = null;
   if (typeof c.createStereoPanner === "function") {
     panner = c.createStereoPanner();
@@ -382,10 +351,6 @@ export function playNote(midi: number, opts: PlayNoteOptions = {}): void {
   };
 }
 
-/**
- * Per-key cooldown so jittery hover (shapes teetering under a still cursor)
- * doesn't machine-gun the same note. Returns true if the key may fire.
- */
 export function createRetriggerGuard(cooldownMs = 150) {
   const last = new Map<string, number>();
   return (key: string): boolean => {
