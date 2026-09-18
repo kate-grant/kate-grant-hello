@@ -9,7 +9,8 @@
       "@/*": ["src/*"]
     },
     "types": ["vite/client", "node"],
-    "strict": true
+    "strict": true,
+    "noEmit": true
   },
   "include": ["src"]
 }
