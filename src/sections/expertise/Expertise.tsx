@@ -12,26 +12,26 @@ const AREAS: Area[] = [
   {
     title: "Interfaces",
     summary:
-      "Responsive React front ends, built hand in hand with design, product and data. Recent work: artist analytics dashboards and one-click Spotify for Artists onboarding.",
-    tools: ["React", "TypeScript", "Design tokens", "A/B testing"],
+      "Front ends that feel considered at every scale, from design systems down to single moments of motion and sound.",
+    tools: ["React", "TypeScript", "Design Systems", "A/B Testing"],
   },
   {
     title: "Data",
     summary:
-      "Dense data made readable, from streaming and YouTube Content ID insights for artists to a 3D map of more than 100,000 stars.",
-    tools: ["D3.js", "Three.js", "PostgreSQL", "SQL"],
+      "Pipelines and visualizations that turn raw data into something people can explore, question and act on.",
+    tools: ["D3.js", "Functional Programming", "PostgreSQL", "ETL"],
   },
   {
     title: "Platforms",
     summary:
-      "The plumbing under the interface: GraphQL middleware for real-time data, secure REST APIs, and an OCaml standard library tested to 80% coverage.",
-    tools: ["Node.js", "GraphQL", "OCaml", "Jest"],
+      "The plumbing under the interface: APIs, data models and services that stay fast and easy to reason about as the product and the team grow.",
+    tools: ["Node", "GraphQL", "Live Tracing", "Documentation"],
   },
   {
     title: "Sound",
     summary:
-      "Where the music degree comes in: a multiplayer synth steered by live sentiment analysis, a showcase for 25 web audio works, and fixes to p5.js and Three.js.",
-    tools: ["Web Audio", "p5.js", "Hugging Face", "Firebase"],
+      "The industry knowledge from release pipelines to DAWs, from engineer to musician.",
+    tools: ["Web Audio", "p5.js", "Track Metadata", "MIDI"],
   },
 ];
 
